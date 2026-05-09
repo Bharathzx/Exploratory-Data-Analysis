@@ -1,0 +1,1260 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>EDA Studio — Exploratory Data Analysis</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Mono:wght@300;400;500&family=Instrument+Sans:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+<style>
+:root {
+  --ink:       #1a1208;
+  --paper:     #faf6ef;
+  --cream:     #f2ead8;
+  --warm:      #e8dcc8;
+  --amber:     #c8851a;
+  --amber-lt:  #e8a832;
+  --rust:      #b84c1e;
+  --teal:      #1a7a6e;
+  --teal-lt:   #2aa896;
+  --sage:      #5a7a5e;
+  --muted:     #8a7a6a;
+  --border:    #d8ccb8;
+  --surface:   #fffff8;
+  --shadow:    rgba(26,18,8,0.08);
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+html{scroll-behavior:smooth;}
+body{
+  background:var(--paper);
+  color:var(--ink);
+  font-family:'Instrument Sans',sans-serif;
+  min-height:100vh;
+  position:relative;
+}
+
+/* ── Grain texture overlay ── */
+body::before{
+  content:'';
+  position:fixed;inset:0;
+  background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+  pointer-events:none;z-index:100;opacity:0.6;
+}
+
+/* ── Header ── */
+header{
+  background:var(--ink);
+  color:var(--paper);
+  padding:2rem 3rem 1.8rem;
+  position:relative;
+  overflow:hidden;
+}
+header::after{
+  content:'EDA';
+  position:absolute;right:-1rem;top:-1rem;
+  font-family:'DM Serif Display',serif;
+  font-size:9rem;font-style:italic;
+  color:rgba(255,255,255,0.04);
+  pointer-events:none;line-height:1;
+}
+.header-eyebrow{
+  font-family:'DM Mono',monospace;
+  font-size:0.65rem;letter-spacing:3px;
+  color:var(--amber-lt);
+  text-transform:uppercase;margin-bottom:0.5rem;
+}
+header h1{
+  font-family:'DM Serif Display',serif;
+  font-size:2.4rem;font-weight:400;
+  line-height:1.1;margin-bottom:0.3rem;
+}
+header h1 em{color:var(--amber-lt);font-style:italic;}
+header p{
+  font-family:'DM Mono',monospace;
+  font-size:0.7rem;color:rgba(250,246,239,0.5);
+}
+.header-row{display:flex;align-items:flex-end;justify-content:space-between;flex-wrap:wrap;gap:1rem;}
+.dataset-badge{
+  background:rgba(200,133,26,0.2);
+  border:1px solid var(--amber);
+  color:var(--amber-lt);
+  padding:6px 14px;border-radius:4px;
+  font-family:'DM Mono',monospace;font-size:0.65rem;letter-spacing:1px;
+  white-space:nowrap;
+}
+
+/* ── Nav strip ── */
+.nav-strip{
+  background:var(--ink);
+  border-top:1px solid rgba(255,255,255,0.08);
+  display:flex;overflow-x:auto;
+  padding:0 3rem;
+}
+.nav-strip::-webkit-scrollbar{height:0;}
+.nav-btn{
+  background:none;border:none;
+  color:rgba(250,246,239,0.45);
+  font-family:'Instrument Sans',sans-serif;
+  font-size:0.78rem;font-weight:600;
+  padding:14px 20px;cursor:pointer;
+  border-bottom:2px solid transparent;
+  transition:all 0.2s;white-space:nowrap;
+  letter-spacing:0.3px;
+}
+.nav-btn:hover{color:var(--paper);}
+.nav-btn.active{
+  color:var(--amber-lt);
+  border-bottom-color:var(--amber);
+}
+
+/* ── Layout ── */
+.page{display:none;padding:2.5rem 3rem 5rem;}
+.page.active{display:block;}
+@media(max-width:860px){
+  .page,.nav-strip{padding-left:1.2rem;padding-right:1.2rem;}
+  header{padding:1.5rem 1.2rem;}
+}
+
+.section-head{
+  display:flex;align-items:baseline;gap:1rem;
+  margin-bottom:1.6rem;
+  border-bottom:1px solid var(--border);
+  padding-bottom:0.8rem;
+}
+.section-head h2{
+  font-family:'DM Serif Display',serif;
+  font-size:1.6rem;font-weight:400;
+}
+.section-head .mono-tag{
+  font-family:'DM Mono',monospace;
+  font-size:0.6rem;color:var(--muted);
+  letter-spacing:2px;text-transform:uppercase;
+}
+
+/* ── Cards ── */
+.card{
+  background:var(--surface);
+  border:1px solid var(--border);
+  border-radius:6px;
+  padding:1.4rem;
+  margin-bottom:1.4rem;
+  box-shadow:0 2px 8px var(--shadow);
+}
+.card-label{
+  font-family:'DM Mono',monospace;
+  font-size:0.6rem;letter-spacing:2px;
+  text-transform:uppercase;color:var(--amber);
+  margin-bottom:0.8rem;
+  display:flex;align-items:center;gap:6px;
+}
+.card-label::after{content:'';flex:1;height:1px;background:var(--border);}
+
+/* ── Grid ── */
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:1.4rem;}
+.g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:1rem;}
+.g4{display:grid;grid-template-columns:repeat(4,1fr);gap:1rem;}
+@media(max-width:860px){.g2,.g3,.g4{grid-template-columns:1fr;}}
+@media(min-width:860px) and (max-width:1100px){.g4{grid-template-columns:1fr 1fr;}.g3{grid-template-columns:1fr 1fr;}}
+
+/* ── Stat tiles ── */
+.stat-tile{
+  background:var(--cream);
+  border:1px solid var(--border);
+  border-radius:6px;padding:1.2rem;
+  position:relative;overflow:hidden;
+}
+.stat-tile::before{
+  content:attr(data-icon);
+  position:absolute;right:0.8rem;top:0.4rem;
+  font-size:2rem;opacity:0.12;
+}
+.stat-val{
+  font-family:'DM Serif Display',serif;
+  font-size:2rem;color:var(--ink);line-height:1;
+  margin-bottom:4px;
+}
+.stat-val.amber{color:var(--amber);}
+.stat-val.teal{color:var(--teal);}
+.stat-val.rust{color:var(--rust);}
+.stat-label{
+  font-family:'DM Mono',monospace;
+  font-size:0.6rem;letter-spacing:1.5px;
+  color:var(--muted);text-transform:uppercase;
+}
+
+/* ── Forms ── */
+label.lbl{
+  display:block;
+  font-family:'DM Mono',monospace;
+  font-size:0.62rem;letter-spacing:1.5px;
+  text-transform:uppercase;color:var(--muted);
+  margin-bottom:5px;
+}
+select,input[type=number],input[type=range]{
+  width:100%;
+  background:var(--cream);
+  border:1px solid var(--border);
+  color:var(--ink);
+  border-radius:4px;
+  padding:8px 12px;
+  font-family:'DM Mono',monospace;
+  font-size:0.8rem;
+  outline:none;
+  transition:border-color 0.2s;
+  appearance:none;
+}
+select:focus,input:focus{border-color:var(--amber);}
+input[type=range]{padding:4px;accent-color:var(--amber);cursor:pointer;}
+.fgroup{margin-bottom:1rem;}
+.rrow{display:flex;align-items:center;gap:10px;}
+.rval{font-family:'DM Mono',monospace;font-size:0.8rem;color:var(--amber);min-width:36px;text-align:right;}
+
+/* ── Buttons ── */
+.btn{
+  background:var(--ink);color:var(--paper);
+  border:none;border-radius:4px;
+  font-family:'Instrument Sans',sans-serif;
+  font-weight:700;font-size:0.85rem;
+  padding:11px 24px;cursor:pointer;
+  transition:all 0.2s;
+  display:inline-flex;align-items:center;gap:8px;
+  letter-spacing:0.3px;
+}
+.btn:hover{background:var(--amber);color:var(--ink);}
+.btn-outline{
+  background:transparent;
+  border:1.5px solid var(--border);
+  color:var(--ink);
+}
+.btn-outline:hover{border-color:var(--amber);color:var(--amber);background:transparent;}
+
+/* ── Upload zone ── */
+.upload-zone{
+  border:2px dashed var(--border);border-radius:6px;
+  padding:2rem;text-align:center;cursor:pointer;
+  transition:border-color 0.2s;background:var(--cream);
+}
+.upload-zone:hover{border-color:var(--amber);}
+.upload-zone input{display:none;}
+.upload-icon{font-size:2.2rem;margin-bottom:0.5rem;}
+.upload-txt{
+  font-family:'DM Mono',monospace;font-size:0.7rem;
+  color:var(--muted);line-height:1.8;
+}
+
+/* ── Canvas ── */
+.chart-box{
+  background:var(--cream);
+  border:1px solid var(--border);
+  border-radius:6px;padding:1rem;
+}
+.chart-title-sm{
+  font-family:'DM Mono',monospace;font-size:0.6rem;
+  letter-spacing:2px;text-transform:uppercase;
+  color:var(--muted);margin-bottom:0.6rem;text-align:center;
+}
+canvas{display:block;max-width:100%;}
+
+/* ── Table ── */
+.tbl-wrap{overflow-x:auto;}
+table{width:100%;border-collapse:collapse;font-family:'DM Mono',monospace;font-size:0.68rem;}
+thead th{
+  background:var(--cream);color:var(--amber);
+  padding:9px 12px;text-align:left;
+  border-bottom:2px solid var(--border);
+  font-weight:500;letter-spacing:1px;
+  text-transform:uppercase;white-space:nowrap;
+}
+tbody td{
+  padding:8px 12px;
+  border-bottom:1px solid var(--border);
+  color:var(--ink);vertical-align:middle;
+}
+tbody tr:hover td{background:var(--cream);}
+
+/* ── Insight cards ── */
+.insight{
+  border-left:3px solid var(--amber);
+  background:var(--cream);
+  padding:1rem 1.2rem;border-radius:0 4px 4px 0;
+  margin-bottom:1rem;
+}
+.insight.teal{border-left-color:var(--teal);}
+.insight.rust{border-left-color:var(--rust);}
+.insight-title{font-weight:700;font-size:0.85rem;margin-bottom:4px;}
+.insight-body{font-size:0.78rem;color:var(--muted);line-height:1.6;}
+
+/* ── Correlation cell ── */
+.corr-cell{
+  display:inline-block;width:100%;height:100%;
+  text-align:center;padding:6px 2px;
+  font-family:'DM Mono',monospace;font-size:0.62rem;
+  font-weight:500;
+}
+
+/* ── Pill ── */
+.pill{
+  display:inline-block;padding:2px 10px;border-radius:20px;
+  font-family:'DM Mono',monospace;font-size:0.6rem;font-weight:500;
+  letter-spacing:0.5px;
+}
+.pill-amber{background:rgba(200,133,26,0.15);color:var(--amber);border:1px solid rgba(200,133,26,0.3);}
+.pill-teal{background:rgba(26,122,110,0.15);color:var(--teal);border:1px solid rgba(26,122,110,0.3);}
+.pill-rust{background:rgba(184,76,30,0.15);color:var(--rust);border:1px solid rgba(184,76,30,0.3);}
+
+/* ── Progress bars ── */
+.pbar-row{display:flex;align-items:center;gap:10px;margin-bottom:8px;}
+.pbar-lbl{font-family:'DM Mono',monospace;font-size:0.65rem;color:var(--ink);width:130px;flex-shrink:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.pbar-bg{flex:1;height:7px;background:var(--warm);border-radius:4px;overflow:hidden;}
+.pbar-fill{height:100%;border-radius:4px;background:linear-gradient(90deg,var(--amber),var(--amber-lt));transition:width 0.9s cubic-bezier(.16,1,.3,1);}
+.pbar-val{font-family:'DM Mono',monospace;font-size:0.62rem;color:var(--muted);width:40px;text-align:right;}
+
+/* ── Report section ── */
+.report-block{margin-bottom:2rem;}
+.report-block h3{
+  font-family:'DM Serif Display',serif;font-size:1.2rem;
+  font-weight:400;margin-bottom:0.6rem;
+  display:flex;align-items:center;gap:10px;
+}
+.report-block h3 span{
+  font-family:'DM Mono',monospace;font-size:0.6rem;
+  color:var(--muted);font-weight:400;letter-spacing:2px;
+}
+.report-block p{font-size:0.85rem;line-height:1.8;color:#3a2e22;margin-bottom:0.6rem;}
+
+/* ── Spinner ── */
+.spinner{display:inline-block;width:14px;height:14px;border:2px solid rgba(250,246,239,0.3);border-top-color:var(--paper);border-radius:50%;animation:spin 0.6s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg);}}
+
+/* ── Animations ── */
+@keyframes fadeUp{from{opacity:0;transform:translateY(16px);}to{opacity:1;transform:translateY(0);}}
+.fade-up{animation:fadeUp 0.4s ease both;}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="header-row">
+    <div>
+      <div class="header-eyebrow">◆ Data Analysis Workbench</div>
+      <h1><em>Exploratory</em> Data Analysis</h1>
+      <p>Statistical summaries · Correlations · Distributions · Insights</p>
+    </div>
+    <div id="headerBadge" class="dataset-badge">NO DATASET LOADED</div>
+  </div>
+</header>
+
+<nav class="nav-strip">
+  <button class="nav-btn active" onclick="goPage('overview')">① Overview</button>
+  <button class="nav-btn" onclick="goPage('distributions')">② Distributions</button>
+  <button class="nav-btn" onclick="goPage('correlation')">③ Correlation</button>
+  <button class="nav-btn" onclick="goPage('outliers')">④ Outliers</button>
+  <button class="nav-btn" onclick="goPage('bivariate')">⑤ Bivariate</button>
+  <button class="nav-btn" onclick="goPage('report')">⑥ Report</button>
+</nav>
+
+<!-- ════════════════ PAGE 1: OVERVIEW ════════════════ -->
+<div class="page active" id="page-overview">
+
+  <div class="section-head">
+    <h2>Data Overview</h2>
+    <span class="mono-tag">// load &amp; inspect</span>
+  </div>
+
+  <div class="g2" style="margin-bottom:1.4rem;">
+    <div class="card">
+      <div class="card-label">Built-in Datasets</div>
+      <div class="fgroup">
+        <label class="lbl">Select Dataset</label>
+        <select id="datasetSelect" onchange="loadDataset()">
+          <option value="titanic">🚢 Titanic Passengers</option>
+          <option value="housing">🏠 Housing Prices</option>
+          <option value="sales">📊 Retail Sales</option>
+          <option value="students">🎓 Student Performance</option>
+        </select>
+      </div>
+      <button class="btn" onclick="loadDataset()" style="margin-top:0.3rem;">Load Dataset</button>
+    </div>
+    <div class="card">
+      <div class="card-label">Upload CSV</div>
+      <div class="upload-zone" onclick="document.getElementById('csvUp').click()">
+        <input type="file" id="csvUp" accept=".csv" onchange="handleCSV(event)"/>
+        <div class="upload-icon">📂</div>
+        <div class="upload-txt">Click to upload CSV<br>First row = headers · Numeric columns auto-detected</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Stat tiles -->
+  <div class="g4" id="statTiles" style="margin-bottom:1.4rem;">
+    <div class="stat-tile" data-icon="📋"><div class="stat-val" id="st-rows">—</div><div class="stat-label">Total Rows</div></div>
+    <div class="stat-tile" data-icon="📐"><div class="stat-val amber" id="st-cols">—</div><div class="stat-label">Columns</div></div>
+    <div class="stat-tile" data-icon="🔢"><div class="stat-val teal" id="st-num">—</div><div class="stat-label">Numeric</div></div>
+    <div class="stat-tile" data-icon="🔤"><div class="stat-val rust" id="st-cat">—</div><div class="stat-label">Categorical</div></div>
+  </div>
+
+  <div class="g2" style="margin-bottom:1.4rem;">
+    <div class="card">
+      <div class="card-label">Data Preview</div>
+      <div id="previewTable"><p style="font-family:'DM Mono',monospace;font-size:0.75rem;color:var(--muted);">Load a dataset to preview…</p></div>
+    </div>
+    <div class="card">
+      <div class="card-label">Column Info</div>
+      <div id="colInfo"><p style="font-family:'DM Mono',monospace;font-size:0.75rem;color:var(--muted);">Load a dataset to inspect columns…</p></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-label">Statistical Summary</div>
+    <div id="statsTable"><p style="font-family:'DM Mono',monospace;font-size:0.75rem;color:var(--muted);">Load a dataset to see summary statistics…</p></div>
+  </div>
+</div>
+
+<!-- ════════════════ PAGE 2: DISTRIBUTIONS ════════════════ -->
+<div class="page" id="page-distributions">
+  <div class="section-head">
+    <h2>Distributions</h2>
+    <span class="mono-tag">// histograms &amp; box plots</span>
+  </div>
+
+  <div class="card" style="margin-bottom:1.4rem;">
+    <div class="fgroup" style="max-width:320px;">
+      <label class="lbl">Select Feature</label>
+      <select id="distFeature" onchange="renderDistPage()"></select>
+    </div>
+  </div>
+
+  <div class="g2">
+    <div class="card">
+      <div class="card-label">Histogram</div>
+      <div class="chart-box"><div class="chart-title-sm" id="histTitle">HISTOGRAM</div><canvas id="histCanvas" height="220"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="card-label">Box Plot</div>
+      <div class="chart-box"><div class="chart-title-sm" id="boxTitle">BOX PLOT</div><canvas id="boxCanvas" height="220"></canvas></div>
+    </div>
+  </div>
+
+  <div class="card" style="margin-top:1.4rem;">
+    <div class="card-label">All Features — Mini Histograms</div>
+    <div id="miniHists" style="display:flex;flex-wrap:wrap;gap:12px;"></div>
+  </div>
+</div>
+
+<!-- ════════════════ PAGE 3: CORRELATION ════════════════ -->
+<div class="page" id="page-correlation">
+  <div class="section-head">
+    <h2>Correlation Analysis</h2>
+    <span class="mono-tag">// pearson matrix &amp; ranking</span>
+  </div>
+
+  <div class="g2">
+    <div class="card">
+      <div class="card-label">Correlation Heatmap</div>
+      <div class="chart-box"><canvas id="corrCanvas"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="card-label">Top Correlations Ranked</div>
+      <div id="corrRanked"></div>
+    </div>
+  </div>
+
+  <div class="card" style="margin-top:1.4rem;">
+    <div class="card-label">Insights</div>
+    <div id="corrInsights"></div>
+  </div>
+</div>
+
+<!-- ════════════════ PAGE 4: OUTLIERS ════════════════ -->
+<div class="page" id="page-outliers">
+  <div class="section-head">
+    <h2>Outlier Detection</h2>
+    <span class="mono-tag">// IQR &amp; Z-score methods</span>
+  </div>
+
+  <div class="card" style="margin-bottom:1.4rem;">
+    <div class="fgroup" style="max-width:320px;">
+      <label class="lbl">Detection Method</label>
+      <select id="outlierMethod" onchange="renderOutliers()">
+        <option value="iqr">IQR (Interquartile Range)</option>
+        <option value="zscore">Z-Score (±3σ)</option>
+      </select>
+    </div>
+  </div>
+
+  <div id="outlierGrid" class="g2"></div>
+
+  <div class="card" style="margin-top:1.4rem;">
+    <div class="card-label">Outlier Summary Table</div>
+    <div id="outlierTable"></div>
+  </div>
+</div>
+
+<!-- ════════════════ PAGE 5: BIVARIATE ════════════════ -->
+<div class="page" id="page-bivariate">
+  <div class="section-head">
+    <h2>Bivariate Analysis</h2>
+    <span class="mono-tag">// scatter · group comparison</span>
+  </div>
+
+  <div class="card" style="margin-bottom:1.4rem;">
+    <div class="g2" style="margin-bottom:0;">
+      <div class="fgroup">
+        <label class="lbl">X Axis</label>
+        <select id="biX" onchange="renderBivariate()"></select>
+      </div>
+      <div class="fgroup">
+        <label class="lbl">Y Axis</label>
+        <select id="biY" onchange="renderBivariate()"></select>
+      </div>
+    </div>
+  </div>
+
+  <div class="g2">
+    <div class="card">
+      <div class="card-label">Scatter Plot</div>
+      <div class="chart-box"><canvas id="scatterCanvas" height="300"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="card-label">Relationship Stats</div>
+      <div id="biStats"></div>
+    </div>
+  </div>
+
+  <div class="card" style="margin-top:1.4rem;">
+    <div class="card-label">Feature vs Feature — All Pairs Heatmap (Pearson)</div>
+    <div class="chart-box"><canvas id="pairCanvas"></canvas></div>
+  </div>
+</div>
+
+<!-- ════════════════ PAGE 6: REPORT ════════════════ -->
+<div class="page" id="page-report">
+  <div class="section-head">
+    <h2>EDA Report</h2>
+    <span class="mono-tag">// structured insights</span>
+  </div>
+  <div id="reportContent">
+    <p style="font-family:'DM Mono',monospace;font-size:0.75rem;color:var(--muted);">Load a dataset first to generate the report.</p>
+  </div>
+</div>
+
+<script>
+// ══════════════════════════════════════════════
+//  STATE
+// ══════════════════════════════════════════════
+const S = {
+  rawData: [],
+  cols: [],
+  numCols: [],
+  catCols: [],
+  name: '',
+};
+
+// ══════════════════════════════════════════════
+//  BUILT-IN DATASETS
+// ══════════════════════════════════════════════
+function randn(){ let u=0,v=0; while(!u)u=Math.random(); while(!v)v=Math.random(); return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v); }
+function rnd(mn,mx){ return mn+Math.random()*(mx-mn); }
+function pick(arr){ return arr[Math.floor(Math.random()*arr.length)]; }
+
+const DATASETS = {
+  titanic:{
+    name:'Titanic Passengers',
+    generate(){
+      const data=[];
+      for(let i=0;i<891;i++){
+        const pclass=pick([1,2,3]);
+        const sex=pick(['male','female']);
+        const age=Math.max(1,+(18+randn()*15).toFixed(0));
+        const sibsp=Math.floor(Math.max(0,randn()*1.5));
+        const parch=Math.floor(Math.max(0,randn()*0.8));
+        const fare=+(pclass===1?rnd(30,512):pclass===2?rnd(10,65):rnd(4,30)).toFixed(2);
+        const embark=pick(['S','C','Q']);
+        // survival probability
+        let p=0.38;
+        if(sex==='female')p+=0.35;
+        if(pclass===1)p+=0.2;
+        if(pclass===3)p-=0.15;
+        if(age<16)p+=0.15;
+        const survived=Math.random()<p?1:0;
+        data.push({pclass,sex,age,sibsp,parch,fare,embarked:embark,survived});
+      }
+      return data;
+    }
+  },
+  housing:{
+    name:'Housing Prices',
+    generate(){
+      const data=[];
+      for(let i=0;i<506;i++){
+        const area=+(rnd(500,4500)+randn()*300).toFixed(0);
+        const rooms=Math.max(1,+(3+randn()*1.5).toFixed(0));
+        const age=Math.max(0,+(30+randn()*20).toFixed(0));
+        const dist=+(rnd(1,12)+Math.abs(randn())*2).toFixed(2);
+        const crime=+(Math.max(0,randn()*4+2)).toFixed(3);
+        const school=+(rnd(3,9)+randn()*0.5).toFixed(1);
+        const price=+(area*0.08+rooms*12000-age*150-dist*1500-crime*800+school*4000+randn()*8000).toFixed(0);
+        const neighborhood=pick(['Downtown','Suburbs','Midtown','East Side','West End']);
+        data.push({area,rooms,age_years:age,dist_center_km:dist,crime_rate:crime,school_rating:school,neighborhood,price:Math.max(50000,price)});
+      }
+      return data;
+    }
+  },
+  sales:{
+    name:'Retail Sales',
+    generate(){
+      const data=[];
+      const cats=['Electronics','Clothing','Food','Furniture','Toys'];
+      const regions=['North','South','East','West','Central'];
+      for(let i=0;i<600;i++){
+        const cat=pick(cats);
+        const region=pick(regions);
+        const units=Math.max(1,+(10+randn()*8).toFixed(0));
+        const price=+(cat==='Electronics'?rnd(200,2000):cat==='Furniture'?rnd(100,800):rnd(10,150)).toFixed(2);
+        const discount=+(rnd(0,0.35)).toFixed(2);
+        const profit_margin=+(rnd(0.05,0.45)+randn()*0.05).toFixed(3);
+        const revenue=+(units*price*(1-discount)).toFixed(2);
+        const month=Math.ceil(Math.random()*12);
+        data.push({category:cat,region,units_sold:units,unit_price:price,discount,revenue,profit_margin,month});
+      }
+      return data;
+    }
+  },
+  students:{
+    name:'Student Performance',
+    generate(){
+      const data=[];
+      for(let i=0;i<395;i++){
+        const school=pick(['GP','MS']);
+        const sex=pick(['F','M']);
+        const age=Math.floor(rnd(15,22));
+        const study=Math.max(0,+(2+randn()*1.5).toFixed(1));
+        const absences=Math.max(0,Math.floor(rnd(0,30)));
+        const failures=Math.floor(Math.max(0,randn()<0.85?0:rnd(1,4)));
+        const internet=pick(['yes','no']);
+        const g1=Math.max(0,Math.min(20,+(10+randn()*3).toFixed(0)));
+        const g2=Math.max(0,Math.min(20,+(g1+randn()*2).toFixed(0)));
+        const g3=Math.max(0,Math.min(20,+(g2*0.8+study*0.5-absences*0.1-failures*1.5+randn()*1.5).toFixed(0)));
+        data.push({school,sex,age,study_hours:study,absences,failures,internet,g1_score:g1,g2_score:g2,g3_final:g3});
+      }
+      return data;
+    }
+  }
+};
+
+// ══════════════════════════════════════════════
+//  LOAD
+// ══════════════════════════════════════════════
+function loadDataset(){
+  const key=document.getElementById('datasetSelect').value;
+  const ds=DATASETS[key];
+  ingest(ds.generate(), ds.name);
+}
+
+function handleCSV(evt){
+  const file=evt.target.files[0]; if(!file) return;
+  const reader=new FileReader();
+  reader.onload=e=>{
+    const lines=e.target.result.trim().split('\n');
+    const headers=lines[0].split(',').map(h=>h.trim().replace(/"/g,''));
+    const data=lines.slice(1).filter(l=>l.trim()).map(line=>{
+      const vals=line.split(',');
+      const row={};
+      headers.forEach((h,i)=>{ const v=vals[i]?.trim().replace(/"/g,''); row[h]=isNaN(v)||v===''?v:+v; });
+      return row;
+    });
+    ingest(data, file.name.replace('.csv',''));
+  };
+  reader.readAsText(file);
+}
+
+function ingest(data, name){
+  S.rawData=data; S.name=name;
+  S.cols=Object.keys(data[0]||{});
+  S.numCols=S.cols.filter(c=>typeof data[0][c]==='number');
+  S.catCols=S.cols.filter(c=>typeof data[0][c]==='string');
+  updateUI();
+}
+
+function updateUI(){
+  // badge
+  document.getElementById('headerBadge').textContent=`${S.name.toUpperCase()} · ${S.rawData.length} ROWS`;
+  // stat tiles
+  setText('st-rows', S.rawData.length.toLocaleString());
+  setText('st-cols', S.cols.length);
+  setText('st-num', S.numCols.length);
+  setText('st-cat', S.catCols.length);
+  // preview
+  renderPreview();
+  renderColInfo();
+  renderStats();
+  // populate selects
+  populateSelect('distFeature', S.numCols);
+  populateSelect('biX', S.numCols);
+  populateSelect('biY', S.numCols, 1);
+  renderDistPage();
+  renderCorrelation();
+  renderOutliers();
+  renderBivariate();
+  renderReport();
+}
+
+function setText(id,v){ document.getElementById(id).textContent=v; }
+function populateSelect(id, arr, defaultIdx=0){
+  const sel=document.getElementById(id);
+  sel.innerHTML=arr.map((f,i)=>`<option value="${f}" ${i===defaultIdx?'selected':''}>${f}</option>`).join('');
+}
+
+// ══════════════════════════════════════════════
+//  OVERVIEW RENDERS
+// ══════════════════════════════════════════════
+function renderPreview(){
+  const rows=S.rawData.slice(0,8);
+  const cols=S.cols.slice(0,8); // max 8 cols for readability
+  let h=`<div class="tbl-wrap"><table><thead><tr>${cols.map(c=>`<th>${c}</th>`).join('')}</tr></thead><tbody>`;
+  rows.forEach(r=>{ h+=`<tr>${cols.map(c=>`<td>${r[c]??''}</td>`).join('')}</tr>`; });
+  h+=`</tbody></table></div><p style="margin-top:6px;font-family:'DM Mono',monospace;font-size:0.6rem;color:var(--muted);">Showing 8/${S.rawData.length} rows · ${cols.length}/${S.cols.length} cols</p>`;
+  document.getElementById('previewTable').innerHTML=h;
+}
+
+function renderColInfo(){
+  let h=`<div class="tbl-wrap"><table><thead><tr><th>Column</th><th>Type</th><th>Unique</th><th>Nulls</th></tr></thead><tbody>`;
+  S.cols.slice(0,15).forEach(c=>{
+    const vals=S.rawData.map(r=>r[c]);
+    const type=typeof S.rawData[0][c]==='number'?'numeric':'categorical';
+    const uniq=new Set(vals).size;
+    const nulls=vals.filter(v=>v==null||v===''||v!==v).length;
+    const pill=type==='numeric'?'pill-teal':'pill-amber';
+    h+=`<tr><td><b>${c}</b></td><td><span class="pill ${pill}">${type}</span></td><td>${uniq}</td><td>${nulls}</td></tr>`;
+  });
+  h+=`</tbody></table></div>`;
+  document.getElementById('colInfo').innerHTML=h;
+}
+
+function renderStats(){
+  if(!S.numCols.length){ document.getElementById('statsTable').innerHTML='<p style="color:var(--muted);font-size:0.75rem;font-family:DM Mono,monospace;">No numeric columns found.</p>'; return; }
+  let h=`<div class="tbl-wrap"><table><thead><tr><th>Feature</th><th>Min</th><th>Max</th><th>Mean</th><th>Median</th><th>Std Dev</th><th>Skew</th></tr></thead><tbody>`;
+  S.numCols.forEach(c=>{
+    const vals=S.rawData.map(r=>r[c]).filter(v=>typeof v==='number'&&isFinite(v));
+    const mn=Math.min(...vals), mx=Math.max(...vals);
+    const m=mean(vals), med=median(vals), sd=stddev(vals);
+    const sk=skewness(vals);
+    const skColor=Math.abs(sk)>1?'color:var(--rust)':Math.abs(sk)>0.5?'color:var(--amber)':'';
+    h+=`<tr><td><b>${c}</b></td><td>${fmt(mn)}</td><td>${fmt(mx)}</td><td>${fmt(m)}</td><td>${fmt(med)}</td><td>${fmt(sd)}</td><td style="${skColor}">${fmt(sk)}</td></tr>`;
+  });
+  h+=`</tbody></table></div>`;
+  document.getElementById('statsTable').innerHTML=h;
+}
+
+// ══════════════════════════════════════════════
+//  DISTRIBUTIONS
+// ══════════════════════════════════════════════
+function renderDistPage(){
+  const feat=document.getElementById('distFeature').value;
+  if(!feat||!S.rawData.length) return;
+  const vals=numVals(feat);
+  document.getElementById('histTitle').textContent=feat.toUpperCase()+' — HISTOGRAM';
+  document.getElementById('boxTitle').textContent=feat.toUpperCase()+' — BOX PLOT';
+  drawHistogram('histCanvas', vals, feat);
+  drawBoxPlot('boxCanvas', vals, feat);
+  drawMiniHists();
+}
+
+function drawHistogram(canvasId, vals, feat){
+  const canvas=document.getElementById(canvasId);
+  const W=canvas.parentElement.offsetWidth-32||400;
+  canvas.width=W; canvas.height=220;
+  const ctx=canvas.getContext('2d');
+  ctx.clearRect(0,0,W,220);
+  const bins=20;
+  const mn=Math.min(...vals), mx=Math.max(...vals);
+  const bw=(mx-mn)/bins;
+  const counts=Array(bins).fill(0);
+  vals.forEach(v=>{ const b=Math.min(bins-1,Math.floor((v-mn)/bw)); counts[b]++; });
+  const mc=Math.max(...counts);
+  const pad=40, plotH=170, plotW=W-pad-10;
+  // grid
+  ctx.strokeStyle='#e8dcc8'; ctx.lineWidth=1;
+  for(let i=0;i<=4;i++){
+    const y=10+plotH-i*plotH/4;
+    ctx.beginPath(); ctx.moveTo(pad,y); ctx.lineTo(W-10,y); ctx.stroke();
+    ctx.fillStyle='#8a7a6a'; ctx.font='8px DM Mono,monospace'; ctx.textAlign='right';
+    ctx.fillText(Math.round(mc*i/4),pad-4,y+3);
+  }
+  // bars
+  counts.forEach((c,i)=>{
+    const bh=(c/mc)*plotH;
+    const x=pad+i*(plotW/bins);
+    const bWidth=plotW/bins-1;
+    // gradient fill
+    const grad=ctx.createLinearGradient(x,10+plotH-bh,x,10+plotH);
+    grad.addColorStop(0,'#c8851a'); grad.addColorStop(1,'rgba(200,133,26,0.3)');
+    ctx.fillStyle=grad;
+    ctx.beginPath(); ctx.roundRect(x,10+plotH-bh,bWidth,bh,2); ctx.fill();
+  });
+  // x labels
+  ctx.fillStyle='#8a7a6a'; ctx.font='8px DM Mono,monospace'; ctx.textAlign='center';
+  [0,0.25,0.5,0.75,1].forEach(t=>{ ctx.fillText(fmt(mn+t*(mx-mn)),pad+t*plotW,10+plotH+14); });
+  // Normal curve overlay
+  const m=mean(vals), sd=stddev(vals);
+  ctx.strokeStyle='#b84c1e'; ctx.lineWidth=2; ctx.setLineDash([4,3]);
+  ctx.beginPath();
+  for(let i=0;i<=100;i++){
+    const x=mn+i/100*(mx-mn);
+    const density=Math.exp(-0.5*((x-m)/sd)**2)/(sd*Math.sqrt(2*Math.PI));
+    const normH=density*vals.length*bw;
+    const cx=pad+(x-mn)/(mx-mn)*plotW;
+    const cy=10+plotH-(normH/mc)*plotH;
+    i===0?ctx.moveTo(cx,cy):ctx.lineTo(cx,cy);
+  }
+  ctx.stroke(); ctx.setLineDash([]);
+}
+
+function drawBoxPlot(canvasId, vals, feat){
+  const canvas=document.getElementById(canvasId);
+  const W=canvas.parentElement.offsetWidth-32||400;
+  canvas.width=W; canvas.height=220;
+  const ctx=canvas.getContext('2d');
+  ctx.clearRect(0,0,W,220);
+  const sorted=[...vals].sort((a,b)=>a-b);
+  const q1=percentile(sorted,25), q2=percentile(sorted,50), q3=percentile(sorted,75);
+  const iqr=q3-q1;
+  const wl=Math.max(sorted[0],q1-1.5*iqr);
+  const wu=Math.min(sorted[sorted.length-1],q3+1.5*iqr);
+  const outliers=sorted.filter(v=>v<wl||v>wu);
+  const mn=Math.min(...vals), mx=Math.max(...vals);
+  const pad=50, plotW=W-pad-20;
+  const toX=v=>pad+(v-mn)/(mx-mn+1e-9)*plotW;
+  const midY=110;
+
+  // grid lines
+  [mn,q1,q2,q3,mx].forEach(v=>{
+    ctx.strokeStyle='#e8dcc8'; ctx.lineWidth=1; ctx.setLineDash([3,3]);
+    ctx.beginPath(); ctx.moveTo(toX(v),20); ctx.lineTo(toX(v),200); ctx.stroke();
+    ctx.setLineDash([]);
+  });
+  // whiskers
+  ctx.strokeStyle='#8a7a6a'; ctx.lineWidth=2;
+  ctx.beginPath(); ctx.moveTo(toX(wl),midY); ctx.lineTo(toX(q1),midY); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(toX(q3),midY); ctx.lineTo(toX(wu),midY); ctx.stroke();
+  // end caps
+  [wl,wu].forEach(v=>{ ctx.beginPath(); ctx.moveTo(toX(v),midY-15); ctx.lineTo(toX(v),midY+15); ctx.stroke(); });
+  // box
+  const grad=ctx.createLinearGradient(toX(q1),midY-30,toX(q3),midY+30);
+  grad.addColorStop(0,'rgba(200,133,26,0.4)'); grad.addColorStop(1,'rgba(200,133,26,0.15)');
+  ctx.fillStyle=grad;
+  ctx.strokeStyle='var(--amber)'; ctx.lineWidth=2;
+  ctx.beginPath(); ctx.roundRect(toX(q1),midY-30,toX(q3)-toX(q1),60,3);
+  ctx.fill(); ctx.stroke();
+  // median
+  ctx.strokeStyle='#b84c1e'; ctx.lineWidth=3;
+  ctx.beginPath(); ctx.moveTo(toX(q2),midY-30); ctx.lineTo(toX(q2),midY+30); ctx.stroke();
+  // outliers
+  ctx.fillStyle='rgba(184,76,30,0.7)';
+  outliers.slice(0,80).forEach(v=>{ ctx.beginPath(); ctx.arc(toX(v),midY,3,0,2*Math.PI); ctx.fill(); });
+  // labels
+  ctx.fillStyle='#8a7a6a'; ctx.font='8px DM Mono,monospace'; ctx.textAlign='center';
+  [[wl,'W.Low'],[q1,'Q1'],[q2,'Med'],[q3,'Q3'],[wu,'W.High']].forEach(([v,l])=>{
+    ctx.fillText(l,toX(v),midY-42);
+    ctx.fillStyle='var(--amber)'; ctx.fillText(fmt(v),toX(v),midY+50);
+    ctx.fillStyle='#8a7a6a';
+  });
+  if(outliers.length){ ctx.fillStyle='var(--rust)'; ctx.font='9px DM Mono'; ctx.textAlign='center'; ctx.fillText(`${outliers.length} outlier${outliers.length>1?'s':''}`,W/2,200); }
+}
+
+function drawMiniHists(){
+  const container=document.getElementById('miniHists');
+  container.innerHTML='';
+  S.numCols.forEach(feat=>{
+    const vals=numVals(feat);
+    const wrap=document.createElement('div');
+    wrap.style.cssText='width:140px;';
+    const titleEl=document.createElement('div');
+    titleEl.style.cssText='font-family:DM Mono,monospace;font-size:0.58rem;color:var(--muted);margin-bottom:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;';
+    titleEl.textContent=feat;
+    const canvas=document.createElement('canvas');
+    canvas.width=140; canvas.height=60;
+    wrap.appendChild(titleEl); wrap.appendChild(canvas);
+    container.appendChild(wrap);
+    // draw mini
+    const ctx=canvas.getContext('2d');
+    const bins=12, mn=Math.min(...vals), mx=Math.max(...vals);
+    const bwSize=(mx-mn)/bins;
+    const counts=Array(bins).fill(0);
+    vals.forEach(v=>{ const b=Math.min(bins-1,Math.floor((v-mn)/bwSize)); counts[b]++; });
+    const mc=Math.max(...counts);
+    counts.forEach((c,i)=>{
+      const bh=(c/mc)*50;
+      const x=i*(140/bins);
+      const grad=ctx.createLinearGradient(x,0,x,60);
+      grad.addColorStop(0,'#c8851a'); grad.addColorStop(1,'rgba(200,133,26,0.2)');
+      ctx.fillStyle=grad;
+      ctx.beginPath(); ctx.rect(x+1,60-bh,140/bins-2,bh); ctx.fill();
+    });
+  });
+}
+
+// ══════════════════════════════════════════════
+//  CORRELATION
+// ══════════════════════════════════════════════
+function renderCorrelation(){
+  if(!S.numCols.length) return;
+  const feats=S.numCols;
+  const n=feats.length;
+  // compute matrix
+  const matrix=feats.map(a=>feats.map(b=>pearson(numVals(a),numVals(b))));
+  drawCorrHeatmap(matrix, feats);
+  // ranked pairs
+  const pairs=[];
+  for(let i=0;i<n;i++) for(let j=i+1;j<n;j++) pairs.push({a:feats[i],b:feats[j],r:matrix[i][j]});
+  pairs.sort((x,y)=>Math.abs(y.r)-Math.abs(x.r));
+  // ranked list
+  let h='';
+  pairs.slice(0,12).forEach(p=>{
+    const pct=Math.abs(p.r)*100;
+    const color=p.r>0?'var(--teal)':'var(--rust)';
+    h+=`<div class="pbar-row">
+      <div class="pbar-lbl">${p.a} × ${p.b}</div>
+      <div class="pbar-bg"><div class="pbar-fill" style="width:${pct.toFixed(1)}%;background:${color};"></div></div>
+      <div class="pbar-val" style="color:${color};">${p.r.toFixed(2)}</div>
+    </div>`;
+  });
+  document.getElementById('corrRanked').innerHTML=h;
+  // insights
+  const strong=pairs.filter(p=>Math.abs(p.r)>=0.7);
+  const moderate=pairs.filter(p=>Math.abs(p.r)>=0.4&&Math.abs(p.r)<0.7);
+  let ins='';
+  if(strong.length){ const p=strong[0]; ins+=`<div class="insight"><div class="insight-title">Strong Correlation Detected</div><div class="insight-body"><b>${p.a}</b> and <b>${p.b}</b> have a ${p.r>0?'positive':'negative'} correlation of <b>${p.r.toFixed(3)}</b>. These features are highly related and may capture similar information.</div></div>`; }
+  if(moderate.length){ ins+=`<div class="insight teal"><div class="insight-title">${moderate.length} Moderate Correlation${moderate.length>1?'s':''}</div><div class="insight-body">Features like <b>${moderate[0].a}</b> × <b>${moderate[0].b}</b> show moderate correlation (r=${moderate[0].r.toFixed(2)}). Worth exploring for feature engineering.</div></div>`; }
+  if(!strong.length&&!moderate.length) ins=`<div class="insight rust"><div class="insight-title">Low Inter-feature Correlations</div><div class="insight-body">No strong correlations detected. Features appear relatively independent, which is generally good for modeling.</div></div>`;
+  document.getElementById('corrInsights').innerHTML=ins;
+}
+
+function drawCorrHeatmap(matrix, feats){
+  const canvas=document.getElementById('corrCanvas');
+  const n=feats.length;
+  const cell=Math.max(28, Math.min(56, Math.floor(440/n)));
+  const pad=80;
+  const S2=n*cell+pad;
+  canvas.width=S2; canvas.height=S2;
+  const ctx=canvas.getContext('2d');
+  ctx.clearRect(0,0,S2,S2);
+  ctx.fillStyle='#faf6ef'; ctx.fillRect(0,0,S2,S2);
+
+  for(let r=0;r<n;r++) for(let c=0;c<n;c++){
+    const v=matrix[r][c];
+    const alpha=Math.abs(v);
+    const color=v>0?`rgba(26,122,110,${0.1+alpha*0.85})`:`rgba(184,76,30,${0.1+alpha*0.85})`;
+    ctx.fillStyle=color;
+    ctx.fillRect(pad+c*cell,pad+r*cell,cell-1,cell-1);
+    ctx.fillStyle=alpha>0.5?'#faf6ef':v>0?'#1a7a6e':'#b84c1e';
+    ctx.font=`bold ${Math.max(8,cell/3.5)}px DM Mono,monospace`;
+    ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillText(v.toFixed(1),pad+c*cell+cell/2,pad+r*cell+cell/2);
+  }
+  // labels
+  ctx.fillStyle='#3a2e22'; ctx.font=`${Math.max(7,cell/4)}px DM Mono,monospace`;
+  feats.forEach((f,i)=>{
+    const lbl=f.slice(0,9);
+    ctx.textAlign='right'; ctx.textBaseline='middle';
+    ctx.fillText(lbl,pad-4,pad+i*cell+cell/2);
+    ctx.textAlign='center'; ctx.textBaseline='top';
+    ctx.save(); ctx.translate(pad+i*cell+cell/2,pad-4); ctx.rotate(-Math.PI/3);
+    ctx.textAlign='right'; ctx.fillText(lbl,0,0); ctx.restore();
+  });
+}
+
+// ══════════════════════════════════════════════
+//  OUTLIERS
+// ══════════════════════════════════════════════
+function renderOutliers(){
+  const method=document.getElementById('outlierMethod')?.value||'iqr';
+  if(!S.numCols.length) return;
+
+  const grid=document.getElementById('outlierGrid');
+  grid.innerHTML='';
+  const summary=[];
+
+  S.numCols.forEach(feat=>{
+    const vals=numVals(feat);
+    let outlierIdx=[];
+    if(method==='iqr'){
+      const q1=percentile([...vals].sort((a,b)=>a-b),25);
+      const q3=percentile([...vals].sort((a,b)=>a-b),75);
+      const iqr=q3-q1;
+      outlierIdx=vals.map((v,i)=>(v<q1-1.5*iqr||v>q3+1.5*iqr)?i:-1).filter(i=>i>=0);
+    } else {
+      const m=mean(vals), sd=stddev(vals);
+      outlierIdx=vals.map((v,i)=>(Math.abs((v-m)/sd)>3)?i:-1).filter(i=>i>=0);
+    }
+    summary.push({feat,count:outlierIdx.length,pct:(outlierIdx.length/vals.length*100)});
+
+    const card=document.createElement('div');
+    card.className='card fade-up';
+    const canvas=document.createElement('canvas');
+    canvas.height=160;
+    card.innerHTML=`<div class="card-label">${feat}</div><div class="chart-box"><div class="chart-title-sm">${outlierIdx.length} OUTLIER${outlierIdx.length!==1?'S':''} (${(outlierIdx.length/vals.length*100).toFixed(1)}%)</div></div>`;
+    card.querySelector('.chart-box').appendChild(canvas);
+    grid.appendChild(card);
+
+    // draw scatter-strip
+    requestAnimationFrame(()=>{
+      const W=canvas.parentElement.offsetWidth-32||300;
+      canvas.width=W; canvas.height=160;
+      const ctx=canvas.getContext('2d');
+      ctx.clearRect(0,0,W,160);
+      const mn=Math.min(...vals), mx=Math.max(...vals);
+      const toX=v=>40+(v-mn)/(mx-mn+1e-9)*(W-60);
+      const outSet=new Set(outlierIdx);
+      vals.forEach((v,i)=>{
+        const x=toX(v), y=80+randn()*25;
+        ctx.beginPath(); ctx.arc(x,Math.max(20,Math.min(140,y)),outSet.has(i)?4:2,0,2*Math.PI);
+        ctx.fillStyle=outSet.has(i)?'rgba(184,76,30,0.8)':'rgba(200,133,26,0.25)';
+        ctx.fill();
+      });
+      ctx.fillStyle='#8a7a6a'; ctx.font='8px DM Mono'; ctx.textAlign='center';
+      ctx.fillText(fmt(mn),40,155); ctx.fillText(fmt(mx),W-20,155);
+    });
+  });
+
+  // summary table
+  let h=`<div class="tbl-wrap"><table><thead><tr><th>Feature</th><th>Outlier Count</th><th>% of Data</th><th>Severity</th></tr></thead><tbody>`;
+  summary.forEach(s=>{
+    const sev=s.pct>10?`<span class="pill pill-rust">HIGH</span>`:s.pct>3?`<span class="pill pill-amber">MODERATE</span>`:`<span class="pill pill-teal">LOW</span>`;
+    h+=`<tr><td><b>${s.feat}</b></td><td>${s.count}</td><td>${s.pct.toFixed(2)}%</td><td>${sev}</td></tr>`;
+  });
+  h+=`</tbody></table></div>`;
+  document.getElementById('outlierTable').innerHTML=h;
+}
+
+// ══════════════════════════════════════════════
+//  BIVARIATE
+// ══════════════════════════════════════════════
+function renderBivariate(){
+  const xf=document.getElementById('biX')?.value;
+  const yf=document.getElementById('biY')?.value;
+  if(!xf||!yf||!S.rawData.length) return;
+  const xv=numVals(xf), yv=numVals(yf);
+  drawScatter('scatterCanvas',xv,yv,xf,yf);
+  // Stats
+  const r=pearson(xv,yv);
+  const rSq=r*r;
+  document.getElementById('biStats').innerHTML=`
+    <div class="g2" style="gap:0.8rem;margin-bottom:1rem;">
+      <div class="stat-tile" data-icon="📐"><div class="stat-val amber">${r.toFixed(3)}</div><div class="stat-label">Pearson r</div></div>
+      <div class="stat-tile" data-icon="📊"><div class="stat-val teal">${(rSq*100).toFixed(1)}%</div><div class="stat-label">R² Explained</div></div>
+    </div>
+    <div class="insight ${Math.abs(r)>0.7?'':'teal'}">
+      <div class="insight-title">${Math.abs(r)>0.7?'Strong':Math.abs(r)>0.4?'Moderate':'Weak'} ${r>0?'Positive':'Negative'} Relationship</div>
+      <div class="insight-body"><b>${xf}</b> and <b>${yf}</b> have a Pearson correlation of <b>${r.toFixed(3)}</b>. ${(rSq*100).toFixed(1)}% of variance in ${yf} is explained by ${xf}.</div>
+    </div>`;
+  drawPairHeatmap();
+}
+
+function drawScatter(canvasId,xv,yv,xl,yl){
+  const canvas=document.getElementById(canvasId);
+  const W=canvas.parentElement.offsetWidth-32||400;
+  canvas.width=W; canvas.height=300;
+  const ctx=canvas.getContext('2d');
+  ctx.clearRect(0,0,W,300);
+  const pad=50;
+  const mn_x=Math.min(...xv),mx_x=Math.max(...xv);
+  const mn_y=Math.min(...yv),mx_y=Math.max(...yv);
+  const plotW=W-pad-20, plotH=300-pad-30;
+  const toX=v=>pad+(v-mn_x)/(mx_x-mn_x+1e-9)*plotW;
+  const toY=v=>pad+(1-(v-mn_y)/(mx_y-mn_y+1e-9))*plotH;
+
+  // grid
+  ctx.strokeStyle='#e8dcc8'; ctx.lineWidth=1;
+  for(let i=0;i<=4;i++){
+    ctx.beginPath(); ctx.moveTo(pad,pad+i*plotH/4); ctx.lineTo(W-20,pad+i*plotH/4); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(pad+i*plotW/4,pad); ctx.lineTo(pad+i*plotW/4,pad+plotH); ctx.stroke();
+  }
+  // regression line
+  const xm=mean(xv),ym=mean(yv);
+  const num=xv.reduce((s,v,i)=>(s+(v-xm)*(yv[i]-ym)),0);
+  const den=xv.reduce((s,v)=>s+(v-xm)**2,0);
+  const slope=num/(den||1), intercept=ym-slope*xm;
+  ctx.strokeStyle='rgba(184,76,30,0.7)'; ctx.lineWidth=2.5; ctx.setLineDash([5,4]);
+  ctx.beginPath();
+  ctx.moveTo(toX(mn_x),toY(slope*mn_x+intercept));
+  ctx.lineTo(toX(mx_x),toY(slope*mx_x+intercept));
+  ctx.stroke(); ctx.setLineDash([]);
+
+  // points
+  const n=Math.min(xv.length,500);
+  const step=Math.max(1,Math.floor(xv.length/n));
+  for(let i=0;i<xv.length;i+=step){
+    ctx.beginPath(); ctx.arc(toX(xv[i]),toY(yv[i]),3,0,2*Math.PI);
+    ctx.fillStyle='rgba(200,133,26,0.55)'; ctx.fill();
+    ctx.strokeStyle='rgba(200,133,26,0.9)'; ctx.lineWidth=0.5; ctx.stroke();
+  }
+  // axes labels
+  ctx.fillStyle='#8a7a6a'; ctx.font='9px DM Mono'; ctx.textAlign='center';
+  ctx.fillText(xl,W/2,300-4);
+  ctx.save(); ctx.translate(12,pad+plotH/2); ctx.rotate(-Math.PI/2);
+  ctx.fillText(yl,0,0); ctx.restore();
+}
+
+function drawPairHeatmap(){
+  const canvas=document.getElementById('pairCanvas');
+  const feats=S.numCols;
+  const n=feats.length;
+  const cell=Math.max(24,Math.min(48,Math.floor(600/n)));
+  const pad=70;
+  const dim=n*cell+pad;
+  canvas.width=dim; canvas.height=dim;
+  const ctx=canvas.getContext('2d');
+  ctx.clearRect(0,0,dim,dim);
+  ctx.fillStyle='#faf6ef'; ctx.fillRect(0,0,dim,dim);
+  for(let r=0;r<n;r++) for(let c=0;c<n;c++){
+    const v=pearson(numVals(feats[r]),numVals(feats[c]));
+    const alpha=Math.abs(v);
+    ctx.fillStyle=v>0?`rgba(26,122,110,${0.08+alpha*0.82})`:`rgba(184,76,30,${0.08+alpha*0.82})`;
+    ctx.fillRect(pad+c*cell,pad+r*cell,cell-1,cell-1);
+    if(cell>=32){
+      ctx.fillStyle=alpha>0.55?'#faf6ef':v>0?'#1a5a52':'#7a2010';
+      ctx.font=`${Math.max(7,cell/4.5)}px DM Mono`;
+      ctx.textAlign='center'; ctx.textBaseline='middle';
+      ctx.fillText(v.toFixed(1),pad+c*cell+cell/2,pad+r*cell+cell/2);
+    }
+  }
+  ctx.fillStyle='#3a2e22'; ctx.font=`${Math.max(7,cell/4)}px DM Mono`;
+  feats.forEach((f,i)=>{
+    const lbl=f.slice(0,8);
+    ctx.textAlign='right'; ctx.textBaseline='middle';
+    ctx.fillText(lbl,pad-4,pad+i*cell+cell/2);
+    ctx.save(); ctx.translate(pad+i*cell+cell/2,pad-4); ctx.rotate(-Math.PI/4);
+    ctx.textAlign='right'; ctx.textBaseline='middle'; ctx.fillText(lbl,0,0); ctx.restore();
+  });
+}
+
+// ══════════════════════════════════════════════
+//  REPORT
+// ══════════════════════════════════════════════
+function renderReport(){
+  const d=S.rawData, n=d.length;
+  const missing=S.cols.reduce((s,c)=>s+d.filter(r=>r[c]==null||r[c]==='').length,0);
+  const topCorr=[];
+  for(let i=0;i<S.numCols.length;i++) for(let j=i+1;j<S.numCols.length;j++){
+    topCorr.push({a:S.numCols[i],b:S.numCols[j],r:pearson(numVals(S.numCols[i]),numVals(S.numCols[j]))});
+  }
+  topCorr.sort((x,y)=>Math.abs(y.r)-Math.abs(x.r));
+
+  let html=`
+  <div class="report-block fade-up">
+    <h3>1. Dataset Overview <span>SUMMARY</span></h3>
+    <p>The <b>${S.name}</b> dataset contains <b>${n.toLocaleString()} records</b> across <b>${S.cols.length} columns</b> — ${S.numCols.length} numeric and ${S.catCols.length} categorical. Total missing values across all columns: <b>${missing}</b> (${(missing/(n*S.cols.length)*100).toFixed(2)}%).</p>
+    <div class="g4" style="margin-top:0.8rem;">
+      <div class="stat-tile" data-icon="📋"><div class="stat-val">${n.toLocaleString()}</div><div class="stat-label">Rows</div></div>
+      <div class="stat-tile" data-icon="📐"><div class="stat-val amber">${S.cols.length}</div><div class="stat-label">Columns</div></div>
+      <div class="stat-tile" data-icon="🔢"><div class="stat-val teal">${S.numCols.length}</div><div class="stat-label">Numeric</div></div>
+      <div class="stat-tile" data-icon="❓"><div class="stat-val rust">${missing}</div><div class="stat-label">Missing</div></div>
+    </div>
+  </div>
+
+  <div class="report-block fade-up">
+    <h3>2. Distribution Analysis <span>SHAPE &amp; SPREAD</span></h3>
+    <p>Key statistical characteristics of numeric features:</p>
+    ${S.numCols.map(c=>{
+      const vals=numVals(c);
+      const sk=skewness(vals);
+      const shape=Math.abs(sk)<0.5?'approximately symmetric':sk>0?'right-skewed (positive)':'left-skewed (negative)';
+      return `<div class="insight ${Math.abs(sk)>1?'rust':Math.abs(sk)>0.5?'':'teal'}">
+        <div class="insight-title">${c}</div>
+        <div class="insight-body">Range [${fmt(Math.min(...vals))} – ${fmt(Math.max(...vals))}] · Mean: ${fmt(mean(vals))} · Std Dev: ${fmt(stddev(vals))} · Distribution is <b>${shape}</b> (skew = ${sk.toFixed(2)}).</div>
+      </div>`;
+    }).join('')}
+  </div>
+
+  <div class="report-block fade-up">
+    <h3>3. Correlation Findings <span>RELATIONSHIPS</span></h3>
+    ${topCorr.length?`<p>Top correlated feature pairs identified:</p>
+    ${topCorr.slice(0,5).map(p=>`
+      <div class="insight ${p.r>0?'teal':'rust'}">
+        <div class="insight-title">${p.a} ↔ ${p.b} &nbsp; <span class="pill ${p.r>0?'pill-teal':'pill-rust'}">${p.r>0?'POSITIVE':'NEGATIVE'} r=${p.r.toFixed(3)}</span></div>
+        <div class="insight-body">${Math.abs(p.r)>=0.7?'Strong':'Moderate'} ${p.r>0?'positive':'negative'} correlation. ${Math.abs(p.r)>=0.7?'These variables are highly related — consider dimensionality reduction or multicollinearity checks before modeling.':'A moderate relationship exists worth including in feature selection analysis.'}</div>
+      </div>`).join('')}`:'<div class="insight"><div class="insight-body">No numeric pairs available for correlation analysis.</div></div>'}
+  </div>
+
+  <div class="report-block fade-up">
+    <h3>4. Outlier Assessment <span>ANOMALIES</span></h3>
+    <p>Using the IQR method (Tukey fences), potential outliers were identified:</p>
+    ${S.numCols.map(c=>{
+      const vals=numVals(c);
+      const sorted=[...vals].sort((a,b)=>a-b);
+      const q1=percentile(sorted,25), q3=percentile(sorted,75), iqr=q3-q1;
+      const cnt=vals.filter(v=>v<q1-1.5*iqr||v>q3+1.5*iqr).length;
+      const pct=cnt/vals.length*100;
+      return `<div class="insight ${pct>10?'rust':pct>3?'':'teal'}"><div class="insight-title">${c} — ${cnt} outlier${cnt!==1?'s':''} (${pct.toFixed(1)}%)</div><div class="insight-body">${pct>10?'High outlier rate — investigate data quality or consider robust scaling.':pct>3?'Moderate outlier presence — standard practice to investigate before modeling.':'Low outlier rate — data appears clean for this feature.'}</div></div>`;
+    }).join('')}
+  </div>
+
+  <div class="report-block fade-up">
+    <h3>5. Categorical Features <span>GROUPS</span></h3>
+    ${S.catCols.length?S.catCols.map(c=>{
+      const vals=S.rawData.map(r=>r[c]);
+      const freq={};
+      vals.forEach(v=>freq[v]=(freq[v]||0)+1);
+      const top=Object.entries(freq).sort((a,b)=>b[1]-a[1]).slice(0,5);
+      return `<div class="insight"><div class="insight-title">${c} — ${Object.keys(freq).length} unique values</div>
+      <div class="insight-body">Top values: ${top.map(([k,v])=>`<b>${k}</b> (${v})`).join(', ')}</div></div>`;
+    }).join(''):'<div class="insight teal"><div class="insight-body">No categorical columns detected in this dataset.</div></div>'}
+  </div>
+
+  <div class="report-block fade-up">
+    <h3>6. Key Takeaways <span>CONCLUSION</span></h3>
+    <p>Based on the exploratory analysis of the <b>${S.name}</b> dataset:</p>
+    <ul style="font-size:0.82rem;line-height:2;padding-left:1.5rem;color:#3a2e22;">
+      <li>Dataset has <b>${n} observations</b> with <b>${(missing===0)?'no':'some'} missing values</b>.</li>
+      <li>${topCorr.length&&Math.abs(topCorr[0].r)>0.6?`<b>${topCorr[0].a}</b> and <b>${topCorr[0].b}</b> show the strongest correlation (r=${topCorr[0].r.toFixed(2)}).`:'Feature correlations are generally low — independent features.'}</li>
+      <li>${S.numCols.map(c=>({c,sk:skewness(numVals(c))})).filter(x=>Math.abs(x.sk)>1).length} feature${S.numCols.map(c=>({c,sk:skewness(numVals(c))})).filter(x=>Math.abs(x.sk)>1).length!==1?'s':''} exhibit high skewness (|skew| > 1) and may benefit from log transformation.</li>
+      <li>Recommend feature scaling before applying distance-based or gradient-based algorithms.</li>
+      <li>Consider further bivariate analysis between correlated pairs before predictive modeling.</li>
+    </ul>
+  </div>`;
+  document.getElementById('reportContent').innerHTML=html;
+}
+
+// ══════════════════════════════════════════════
+//  MATH UTILS
+// ══════════════════════════════════════════════
+function numVals(feat){ return S.rawData.map(r=>r[feat]).filter(v=>typeof v==='number'&&isFinite(v)); }
+function mean(arr){ return arr.reduce((a,b)=>a+b,0)/arr.length; }
+function median(arr){ const s=[...arr].sort((a,b)=>a-b); const m=Math.floor(s.length/2); return s.length%2?s[m]:(s[m-1]+s[m])/2; }
+function stddev(arr){ const m=mean(arr); return Math.sqrt(arr.reduce((s,v)=>s+(v-m)**2,0)/arr.length); }
+function skewness(arr){ const m=mean(arr),sd=stddev(arr)||1,n=arr.length; return arr.reduce((s,v)=>s+((v-m)/sd)**3,0)/n; }
+function percentile(sorted, p){ const idx=(p/100)*(sorted.length-1); const lo=Math.floor(idx),hi=Math.ceil(idx); return sorted[lo]+(sorted[hi]-sorted[lo])*(idx-lo); }
+function pearson(a,b){
+  if(a.length!==b.length||a.length<2) return 0;
+  const ma=mean(a),mb=mean(b);
+  const num=a.reduce((s,v,i)=>(s+(v-ma)*(b[i]-mb)),0);
+  const da=Math.sqrt(a.reduce((s,v)=>s+(v-ma)**2,0));
+  const db=Math.sqrt(b.reduce((s,v)=>s+(v-mb)**2,0));
+  return num/((da*db)||1);
+}
+function fmt(v){ if(v===undefined||v===null||isNaN(v)) return '—'; if(Math.abs(v)>=10000) return v.toLocaleString(undefined,{maximumFractionDigits:0}); if(Math.abs(v)>=100) return v.toFixed(1); return v.toFixed(3); }
+
+// ══════════════════════════════════════════════
+//  NAV
+// ══════════════════════════════════════════════
+function goPage(id){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById('page-'+id).classList.add('active');
+  const idx={overview:0,distributions:1,correlation:2,outliers:3,bivariate:4,report:5}[id];
+  document.querySelectorAll('.nav-btn')[idx].classList.add('active');
+  // re-render canvases when switching tabs
+  if(id==='distributions'&&S.rawData.length) renderDistPage();
+  if(id==='correlation'&&S.rawData.length) renderCorrelation();
+  if(id==='outliers'&&S.rawData.length) renderOutliers();
+  if(id==='bivariate'&&S.rawData.length) renderBivariate();
+}
+
+// ══════════════════════════════════════════════
+//  INIT
+// ══════════════════════════════════════════════
+window.addEventListener('load',()=>{ loadDataset(); });
+window.addEventListener('resize',()=>{ if(S.rawData.length){ renderDistPage(); renderCorrelation(); renderBivariate(); } });
+</script>
+</body>
+</html>
